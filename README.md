@@ -119,32 +119,3 @@ print("Phase cube shape:", dataset.ground_truth_phase.shape) # (500, 256, 256)
 export_fits(dataset, "output/cubes.fits")
 export_npz(dataset, "output/cubes.npz")
 ```
-
----
-
-## Running Tests
-
-```bash
-uv run pytest -v
-```
-
----
-
-## Sharing on GitHub
-
-To push this repository to your GitHub account:
-
-```bash
-# 1. Initialize and commit locally (already prepared)
-git add .
-git commit -m "Initial commit of Tablasul: First-principles PyWFS, Coronagraph, and Science PSF Simulator"
-
-# 2. Create the remote repository on GitHub (via GitHub CLI or web UI):
-# Option A: With GitHub CLI (brew install gh && gh auth login)
-gh repo create tablasul --public --source=. --remote=origin --push
-
-# Option B: Or create a new empty repository named 'tablasul' on github.com, then:
-git remote add origin git@github.com:<YOUR_USERNAME>/tablasul.git
-git branch -M main
-git push -u origin main
-```
