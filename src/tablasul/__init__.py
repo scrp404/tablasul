@@ -1,7 +1,7 @@
 """Tablasul: First-principles PyWFS, Coronagraph, and Science PSF Data Simulator."""
 
 from .core.field import ComplexElectricField
-from .core.aperture import Aperture, CircularAperture, SubaruAperture
+from .core.aperture import Aperture, CircularAperture, SubaruAperture, PupilImageAperture
 from .core.source import (
     Source,
     PointSource,
@@ -24,6 +24,7 @@ __all__ = [
     "Aperture",
     "CircularAperture",
     "SubaruAperture",
+    "PupilImageAperture",
     "Source",
     "PointSource",
     "CompanionSource",

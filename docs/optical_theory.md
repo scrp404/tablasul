@@ -100,3 +100,31 @@ $$\phi_{\text{sci}}(x, y) = \phi_{\text{common}}(x, y) \cdot \left(\frac{\lambda
 $\phi_{\text{ncpa}}$ is expanded in orthonormal Zernike polynomials $Z_j(\rho, \theta)$ (Noll indexing):
 
 $$\phi_{\text{ncpa}}(\rho, \theta) = \sum_{j} a_j Z_j(\rho, \theta)$$
+
+---
+
+## 6. Matrix Fourier Transform (MFT) Decoupled Science Camera
+
+In standard discrete 2D FFT propagation, the focal plane field of view and resolution are strictly coupled to the pupil grid dimensions:
+
+$$\text{FOV}_{\text{FFT}} = N_{\text{pupil}} \cdot \left(\frac{\lambda}{D}\right), \quad \Delta u = \frac{N_{\text{pupil}}}{N_{\text{grid}}} \left(\frac{\lambda}{D}\right)$$
+
+For high-contrast imaging systems where the science detector needs an arbitrary field of view (e.g. zooming in on the inner $\pm 15\,\lambda/D$ or zooming out to $\pm 60\,\lambda/D$) and arbitrary detector pixel dimensions ($N_{\text{det}} \times N_{\text{det}}$) without zero-padding the entire simulation grid, `tablasul` incorporates Soummer's Matrix Fourier Transform (MFT):
+
+$$E_f(u, v) = \mathbf{M}_y \cdot E_{\text{pupil}} \cdot \mathbf{M}_x^T$$
+
+where the 1D kernels are:
+
+$$\mathbf{M}_x[j, k] = \exp\left[ -i 2\pi \cdot u_j \cdot x_k \right] \Delta x \sqrt{\frac{\Delta u \Delta v}{\lambda^2}}$$
+
+This decouples the science camera sampling and field of view entirely from the PyWFS detector grid, while preserving exact energy scaling.
+
+---
+
+## 7. Measured Entrance Pupils (`PupilImageAperture`)
+
+Experimental high-contrast testbeds and telescopes (e.g., Subaru / SCExAO) often have non-ideal pupil geometries with measured spider distortions, actuator dead zones, or segment gaps. `tablasul` accommodates this via `PupilImageAperture`:
+* Reads 2D arrays directly from astronomical FITS files, NumPy `.npy` files, or image files.
+* Automatically normalizes transmission peak to unity.
+* Resamples to the target simulation grid $N_{\text{grid}} \times N_{\text{grid}}$ with bilinear interpolation.
+* Automatically estimates the effective pupil pixel span for angular diffraction scaling $\lambda/D$.

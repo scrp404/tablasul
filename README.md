@@ -118,3 +118,34 @@ print("Phase cube shape:", dataset.ground_truth_phase.shape) # (500, 256, 256)
 export_fits(dataset, "output/cubes.fits")
 export_npz(dataset, "output/cubes.npz")
 ```
+
+---
+
+### 4. Custom Measured Pupil & Decoupled MFT Science Camera
+
+You can load real measured Subaru pupil masks (FITS, NPY, PNG) or CAD files with `PupilImageAperture`, and decouple the science camera FOV/resolution using the Matrix Fourier Transform (`science_propagator="mft"`):
+
+```python
+from tablasul import OpticalSystem, PupilImageAperture, PyramidWFS, LyotCoronagraph
+
+# Load a real measured Subaru telescope pupil mask from a FITS file
+aperture = PupilImageAperture(
+    image_or_path="path/to/subaru_pupil.fits", # or .npy, .png, or 2D array
+    diameter=8.2,                              # physical diameter in meters
+    grid_size=256,                             # simulation grid size
+)
+
+# Science camera decoupled from pupil grid: zoom in to +/-20 lambda/D on 128x128 detector
+system = OpticalSystem(
+    aperture=aperture,
+    pywfs=PyramidWFS(modulation_radius=2.0),
+    coronagraph=LyotCoronagraph(fpm_radius_lod=2.5, lyot_stop_ratio=0.88),
+    science_propagator="mft",                  # decoupled MFT
+    science_fov_lod=20.0,                      # +/- 20 lambda/D FOV
+    science_pixel_dims=128,                    # 128x128 detector pixels
+)
+
+result = system.simulate_frame()
+print("PyWFS detector shape:", result.pywfs_detector.shape) # (256, 256)
+print("Science camera shape:", result.science_psf.shape)     # (128, 128)
+```

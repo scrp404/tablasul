@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional, Union
 import numpy as np
+from scipy.ndimage import zoom
+from astropy.io import fits
 from .field import ComplexElectricField
 
 
@@ -101,3 +105,88 @@ class SubaruAperture(Aperture):
             mask[spider_mask] = 0.0
 
         return mask
+
+
+class PupilImageAperture(Aperture):
+    """Entrance pupil loaded from a file (FITS, NPY, PNG, etc.) or preloaded 2D array.
+
+    Enables using experimentally measured Subaru pupil files, interferometer maps,
+    or CAD aperture masks.
+
+    Attributes:
+        image_or_path: Path to file (.fits, .npy, .png, .tif) or 2D numpy array.
+        diameter: Physical aperture diameter in meters (default: 8.2 m).
+        grid_size: Simulation grid size N x N (default: matches loaded image).
+        samples_across_pupil: Number of pixels across pupil diameter (if None, auto-estimated).
+    """
+
+    def __init__(
+        self,
+        image_or_path: Union[str, Path, np.ndarray],
+        diameter: float = 8.2,
+        grid_size: Optional[int] = None,
+        samples_across_pupil: Optional[int] = None,
+    ) -> None:
+        raw_image = self._load_data(image_or_path)
+
+        # Normalize transmission to [0, 1]
+        max_val = np.max(raw_image)
+        if max_val > 0:
+            raw_image = raw_image / max_val
+        raw_image = np.clip(raw_image, 0.0, 1.0)
+
+        # Determine grid size
+        if grid_size is None:
+            grid_size = raw_image.shape[0]
+
+        # Resample if needed
+        if raw_image.shape != (grid_size, grid_size):
+            zoom_factor = grid_size / raw_image.shape[0]
+            self._mask = zoom(raw_image, zoom_factor, order=1)
+            self._mask = np.clip(self._mask, 0.0, 1.0)
+        else:
+            self._mask = raw_image.astype(np.float64)
+
+        # Estimate samples across pupil if not provided
+        if samples_across_pupil is None:
+            nonzeros = np.where(self._mask > 0.05)
+            if len(nonzeros[0]) > 0:
+                y_span = np.max(nonzeros[0]) - np.min(nonzeros[0])
+                x_span = np.max(nonzeros[1]) - np.min(nonzeros[1])
+                samples_across_pupil = max(int(max(y_span, x_span)), 1)
+            else:
+                samples_across_pupil = grid_size // 2
+
+        super().__init__(
+            diameter=diameter,
+            grid_size=grid_size,
+            samples_across_pupil=samples_across_pupil,
+        )
+
+    def _load_data(self, source: Union[str, Path, np.ndarray]) -> np.ndarray:
+        if isinstance(source, np.ndarray):
+            if source.ndim != 2:
+                raise ValueError(f"Pupil image array must be 2D, got shape {source.shape}")
+            return source.astype(np.float64)
+
+        path = Path(source)
+        if not path.exists():
+            raise FileNotFoundError(f"Pupil file not found: {path}")
+
+        suffix = path.suffix.lower()
+        if suffix in (".fits", ".fit", ".fts"):
+            data = fits.getdata(path)
+            # If 3D cube, take first slice
+            if data.ndim == 3:
+                data = data[0]
+            return data.astype(np.float64)
+        elif suffix == ".npy":
+            return np.load(path).astype(np.float64)
+        else:
+            # Attempt image load with PIL
+            from PIL import Image
+            img = Image.open(path).convert("L")
+            return np.array(img, dtype=np.float64)
+
+    def transmission_mask(self) -> np.ndarray:
+        return self._mask.copy()
