@@ -22,7 +22,6 @@
 ## Documentation
 
 * **[Optical Theory & Mathematical Principles](docs/optical_theory.md)**: Mathematical derivations of Fraunhofer propagation, 4-faceted pyramid phase mask, circular tip-tilt modulation, and Lyot coronagraph filtering.
-* **[PSF Reconstruction Guide](docs/psf_reconstruction_guide.md)**: Tutorial on generating synchronized training datasets and loading them into PyTorch / ML models.
 
 ---
 
@@ -82,7 +81,7 @@ result = system.simulate_frame()
 
 ---
 
-### 3. Generating Synchronized Cubes for PSF Reconstruction
+### 3. Generating Synchronized Cubes
 
 ```python
 from tablasul import (
