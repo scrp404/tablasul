@@ -1,7 +1,5 @@
 # Tablasul
 
-First-principles Wave-Optics Simulator for SCExAO WFS-Based PSF Reconstruction.
-
 `tablasul` generates physically and mathematically grounded synchronized data cubes between a **Pyramid Wavefront Sensor (PyWFS)** and a **Science Focal Plane Camera (PSF)** behind an optional **Lyot Coronagraph**.
 
 ---
