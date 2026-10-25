@@ -22,6 +22,7 @@
 ## Documentation
 
 * **[Optical Theory & Mathematical Principles](docs/optical_theory.md)**: Mathematical derivations of Fraunhofer propagation, 4-faceted pyramid phase mask, circular tip-tilt modulation, and Lyot coronagraph filtering.
+* **[Synchronized Data Guide](docs/synchronized_data_guide.md)**: Guide on simulating, exporting, and loading synchronized multi-dimensional WFS and PSF datasets.
 
 ---
 

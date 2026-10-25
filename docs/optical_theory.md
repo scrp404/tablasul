@@ -123,7 +123,7 @@ This decouples the science camera sampling and field of view entirely from the P
 
 ## 7. Measured Entrance Pupils (`PupilImageAperture`)
 
-Experimental high-contrast testbeds and telescopes (e.g., Subaru / SCExAO) often have non-ideal pupil geometries with measured spider distortions, actuator dead zones, or segment gaps. `tablasul` accommodates this via `PupilImageAperture`:
+Experimental high-contrast testbeds and telescopes (e.g., ground-based telescopes or optical testbeds) often have non-ideal pupil geometries with measured spider distortions, actuator dead zones, or segment gaps. `tablasul` accommodates this via `PupilImageAperture`:
 * Reads 2D arrays directly from astronomical FITS files, NumPy `.npy` files, or image files.
 * Automatically normalizes transmission peak to unity.
 * Resamples to the target simulation grid $N_{\text{grid}} \times N_{\text{grid}}$ with bilinear interpolation.

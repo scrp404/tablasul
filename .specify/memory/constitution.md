@@ -63,4 +63,4 @@ Optical fields must handle diverse astronomical and bench calibration scenarios:
 - The Constitution defines the non-negotiable architectural and physical guidelines for the `tablasul` package.
 - Any pull request or new feature must adhere to the modular toggle pattern, physical unit consistency, and test verification standards.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-25 | **Author**: SCExAO / Tablasul Team
+**Version**: 1.0.0 | **Ratified**: 2026-10-25 | **Author**: Tablasul Team

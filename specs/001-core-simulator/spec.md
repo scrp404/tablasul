@@ -12,11 +12,11 @@
 
 ### User Story 1 - Minimal Diffraction-Limited Benchmark ("Toy Model") (Priority: P1)
 
-As an adaptive optics researcher developing WFS-based PSF reconstruction models,  
+As an adaptive optics researcher simulating synchronized WFS and PSF data,  
 I want to simulate a baseline, unaberrated, diffraction-limited optical system (clear aperture, unmodulated PyWFS, direct science focal plane, no noise),  
 So that I can verify that the first-principles Fourier optics engine produces an analytical Airy disk and correct 4-pupil intensity distributions with zero numerical artifacts before adding complexity.
 
-**Why this priority**: Establishes the foundational wave-optics truth. If the basic unaberrated Fraunhofer propagation and pyramid prism phase splitting fail analytical benchmarks, higher-level reconstruction models cannot be trained reliably.
+**Why this priority**: Establishes the foundational wave-optics truth. If the basic unaberrated Fraunhofer propagation and pyramid prism phase splitting fail analytical benchmarks, downstream algorithms cannot evaluate data reliably.
 
 **Independent Test**:
 Can be fully tested by generating a single monochromatic frame ($N_{\text{frames}} = 1$) on a clear circular pupil, asserting that the science image matches the theoretical Airy pattern to within $<10^{-3}$ relative intensity error, and checking that the unmodulated pyramid produces 4 identical pupil quadrants of equal integrated flux.
@@ -33,7 +33,7 @@ As an AO researcher,
 I want to toggle and configure realistic telescope pupil geometry (Subaru 8.2m aperture with central obscuration and 4 spider vanes) and a Lyot coronagraph (focal plane mask + Lyot stop),  
 So that I can study how pupil obscurations and coronagraphic diffraction suppression alter the relationship between WFS signals and science focal plane speckles.
 
-**Why this priority**: SCExAO operates behind an obscured telescope aperture with spiders and primarily uses coronagraphs to suppress on-axis starlight. Reconstructing the PSF behind a coronagraph requires explicit modeling of the focal plane mask and Lyot stop.
+**Why this priority**: Telescope systems operate behind obscured apertures with spiders and use coronagraphs to suppress on-axis starlight. Simulating focal plane data behind a coronagraph requires explicit modeling of the focal plane mask and Lyot stop.
 
 **Independent Test**:
 Can be tested by comparing direct science PSF vs. coronagraphic science PSF for an on-axis star: the Lyot coronagraph must suppress the on-axis peak intensity by the expected theoretical rejection factor while preserving an off-axis companion.
@@ -49,9 +49,9 @@ Can be tested by comparing direct science PSF vs. coronagraphic science PSF for 
 
 As an AO modeler,  
 I want to configure the circular tip-tilt modulation radius of the PyWFS ($r_{\text{mod}}$ in $\lambda_{\text{wfs}}/D$) and retrieve both raw 4-pupil detector images and normalized slope maps ($S_x, S_y$),  
-So that I can test PSF reconstruction algorithms using either raw image telemetry or classical wavefront slope estimates.
+So that I can analyze WFS telemetry using either raw image data or classical wavefront slope estimates.
 
-**Why this priority**: SCExAO typically modulates the PyWFS (e.g., $1.5\text{--}3\,\lambda/D$) to increase dynamic range and linearity. Testing models against both modulated and unmodulated WFS data is crucial for assessing model sensitivity to modulation errors.
+**Why this priority**: Astronomical PyWFS instruments typically modulate the PyWFS (e.g., $1.5\text{--}3\,\lambda/D$) to increase dynamic range and linearity. Testing models against both modulated and unmodulated WFS data is crucial for assessing sensitivity to modulation errors.
 
 **Independent Test**:
 Can be tested by applying a known small tip/tilt phase tilt across the entrance pupil, varying modulation radius from $r_{\text{mod}} = 0$ to $r_{\text{mod}} = 3\,\lambda/D$, and verifying that the calculated slope signals ($S_x, S_y$) respond linearly to input tilt with slope gain scaling inversely with modulation radius.
@@ -71,7 +71,7 @@ As an optical experimenter,
 I want to configure diverse source types (astronomical stars with blackbody/filter spectra, off-axis planetary companions, or internal monochromatic calibration lasers and flat lamps), with distinct spectral bands for the WFS arm and Science arm,  
 So that I can simulate realistic chromatic differences between the WFS sensing wavelength and science imaging wavelength, as well as bench calibration runs.
 
-**Why this priority**: At SCExAO, the PyWFS senses in the visible ($R/I$ band, e.g. 600–900 nm) while science cameras like CHARIS operate in the near-infrared ($J/H/K$ band, 1.1–1.8 $\mu$m). Wavefront phase scales inversely with wavelength ($\phi \propto 1/\lambda$), creating chromatic speckle patterns that models must account for.
+**Why this priority**: Typically, the PyWFS senses in the visible ($R/I$ band, e.g. 600–900 nm) while science cameras operate in the near-infrared ($J/H/K$ band, 1.1–1.8 $\mu$m). Wavefront phase scales inversely with wavelength ($\phi \propto 1/\lambda$), creating chromatic speckle patterns that simulations must account for.
 
 **Independent Test**:
 Can be tested by simulating a calibration laser (single monochromatic line $\lambda = 635$ nm in both arms) vs an astronomical target (visible WFS $\lambda_{\text{wfs}} = 800$ nm, NIR science $\lambda_{\text{sci}} = 1600$ nm). Verifying that an optical path difference $\Delta \text{OPD}$ creates phase $\phi_{\text{wfs}} = 2\pi \Delta \text{OPD}/\lambda_{\text{wfs}}$ and $\phi_{\text{sci}} = 2\pi \Delta \text{OPD}/\lambda_{\text{sci}}$ (a factor of 2 difference).
@@ -89,7 +89,7 @@ As an ML/AI model developer,
 I want to generate synchronized multi-dimensional data cubes of WFS telemetry, Science PSFs, and Ground-Truth wavefront phase screens, with user-defined frame counts and temporal cadences,  
 So that I have perfectly synchronized paired training and evaluation sets where every science frame corresponds precisely to the concurrent WFS state(s).
 
-**Why this priority**: WFS-based PSF reconstruction requires time-aligned data. Because science cameras often integrate over longer exposure times than fast WFS loops (e.g. 1 kHz WFS vs. 10 Hz science camera), the simulator must handle oversampling where multiple WFS frames integrate into one science PSF.
+**Why this priority**: Simulating synchronized WFS and PSF telemetry requires time-aligned data. Because science cameras often integrate over longer exposure times than fast WFS loops (e.g. 1 kHz WFS vs. 10 Hz science camera), the simulator must handle oversampling where multiple WFS frames integrate into one science PSF.
 
 **Independent Test**:
 Can be tested by generating a cube of $T_{\text{wfs}} = 100$ frames with an exposure ratio of 10:1 (1 science frame per 10 WFS frames), verifying that the science cube has $T_{\text{psf}} = 10$ frames, each equal to the average of the 10 corresponding instantaneous PSF realizations.
@@ -107,9 +107,9 @@ Can be tested by generating a cube of $T_{\text{wfs}} = 100$ frames with an expo
 
 As an AO researcher,  
 I want to inject static/quasi-static Non-Common Path Aberrations (NCPA) into the science arm and apply realistic detector noise (Poisson shot noise, Gaussian read noise $\sigma_{\text{RON}}$, dark current),  
-So that the synthetic data accurately reflects real-world SCExAO laboratory and on-sky data limits.
+So that the synthetic data accurately reflects real-world optical bench and on-sky data limits.
 
-**Why this priority**: NCPA is the primary limiting factor in coronagraphic high-contrast imaging and PSF reconstruction. An algorithm trained without NCPA and detector noise will overfit to ideal linear optics and fail on real instruments.
+**Why this priority**: NCPA is the primary limiting factor in coronagraphic high-contrast imaging. Simulations without NCPA and detector noise will misrepresent real instruments.
 
 **Independent Test**:
 Can be tested by adding a known Zernike NCPA mode (e.g. 50 nm RMS astigmatism) to the science arm with zero atmospheric turbulence. Verifying that the WFS sees zero aberration (common path is flat) while the science focal plane shows degraded PSF with characteristic astigmatic diffraction rings.
@@ -187,6 +187,6 @@ Can be tested by adding a known Zernike NCPA mode (e.g. 50 nm RMS astigmatism) t
 ## Assumptions
 
 - Core simulation runs on CPU using NumPy and SciPy; GPU acceleration (CuPy / PyTorch) can be layered on without changing the optical class interfaces.
-- The optical propagation treats near-field / pupil-to-focal transformations under paraxial Fraunhofer diffraction, which is standard and physically accurate for astronomical extreme AO systems like SCExAO.
+- The optical propagation treats near-field / pupil-to-focal transformations under paraxial Fraunhofer diffraction, which is standard and physically accurate for astronomical extreme AO systems.
 - The default pupil diameter is set to Subaru Telescope ($D = 8.2$ m) with central obscuration ratio $0.29$, but the diameter and obscuration ratio can be scaled arbitrarily.
 - The primary data format is in-memory NumPy arrays, with file serializers for FITS, HDF5, and `.npz`.

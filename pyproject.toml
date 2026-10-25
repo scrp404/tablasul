@@ -7,7 +7,7 @@ name = "tablasul"
 version = "0.1.0"
 description = "First-principles synchronized PyWFS, Coronagraph, and Science PSF Data Simulator"
 readme = "README.md"
-authors = [{ name = "SCExAO / Tablasul Team" }]
+authors = [{ name = "Tablasul Team" }]
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.24",

@@ -1,21 +1,25 @@
-# Training & Evaluating PSF Reconstruction Models with Tablasul
+# Simulating & Loading Synchronized WFS and PSF Data with Tablasul
 
-This guide demonstrates how to use the synchronized data cubes produced by `tablasul` to train, calibrate, and benchmark WFS-based PSF reconstruction algorithms (such as analytical reconstruction, PCA speckle models, convolutional neural networks, or transformer architectures).
+This guide demonstrates how to simulate, export, and load synchronized multi-dimensional data cubes between a Pyramid Wavefront Sensor (PyWFS) and a Science Focal Plane Camera (PSF) using `tablasul`.
 
 ---
 
-## 1. The Data Problem in PSF Reconstruction
+## 1. Synchronized Multi-Scale Optical Data Generation
 
-WFS-based PSF reconstruction seeks to estimate the instantaneous or exposure-integrated focal plane Point Spread Function $I_{\text{PSF}}(u, v)$ directly from contemporaneous WFS telemetry $I_{\text{WFS}}(x, y)$.
+In high-contrast adaptive optics systems, contemporaneous telemetry across multiple optical arms exhibits distinct spatiotemporal characteristics:
 
-### Key Experimental Realities Modeled by Tablasul:
-1. **Cadence Mismatch (Temporal Oversampling)**: WFS loops typically run at $1\text{--}3\,\text{kHz}$ ($\Delta t \approx 1\text{ ms}$), whereas science detectors integrate over $10\text{--}100\text{ ms}$ or longer. A single science frame is the temporal integral over $M$ turbulent WFS states.
-2. **Chromaticity**: WFS sensing occurs in the visible (e.g. $800\,\text{nm}$) while high-contrast science imaging occurs in the NIR (e.g. $1.65\,\mu\text{m}$). Phase scales as $1/\lambda$.
+### Key Physical Features Modeled by Tablasul:
+1. **Cadence Mismatch (Temporal Oversampling)**: WFS loops typically run at $1\text{--}3\,\text{kHz}$ ($\Delta t \approx 1\text{ ms}$), whereas science cameras integrate over longer exposures ($10\text{--}100\text{ ms}$ or longer). A single science exposure is the temporal integral over $M$ turbulent WFS states.
+2. **Chromaticity**: WFS sensing often occurs in the visible (e.g. $800\,\text{nm}$) while science imaging occurs in the near-infrared (e.g. $1.65\,\mu\text{m}$). Optical phase scales inversely with wavelength ($\phi \propto 1/\lambda$).
 3. **Non-Common Path Aberrations (NCPA)**: The science path contains quasi-static aberrations that the WFS does not sense.
+4. **Data Formats**: Produces synchronized multi-extension FITS and compressed NumPy `.npz` cubes:
+   - `wfs_cube`: `[T_wfs, 4, H, W]` raw 4-quadrant intensities or `[T_wfs, 2, H, W]` normalized $(S_x, S_y)$ slopes.
+   - `psf_cube`: `[T_sci, H, W]` science camera integrated focal plane PSF.
+   - `ground_truth_phase`: `[T_wfs, H, W]` instantaneous entrance pupil wavefront phase.
 
 ---
 
-## 2. Generating Synchronized Training Cubes
+## 2. Generating Synchronized Cubes
 
 ```python
 from tablasul import (
@@ -33,7 +37,7 @@ from tablasul import (
     export_npz,
 )
 
-# 1. Setup realistic SCExAO optical train
+# 1. Setup optical system
 system = OpticalSystem(
     aperture=SubaruAperture(diameter=8.2, grid_size=256, samples_across_pupil=48),
     pywfs=PyramidWFS(modulation_radius=2.0, separation_ratio=2.0),
@@ -56,8 +60,8 @@ atmos = FrozenFlowAtmosphere(
 engine = SynchronizedCubeEngine(
     system=system,
     atmosphere=atmos,
-    wfs_frame_rate=1000.0,       # 1 kHz
-    science_exposure_time=0.010, # 10 ms exposures
+    wfs_frame_rate=1000.0,       # 1 kHz WFS
+    science_exposure_time=0.010, # 10 ms science exposure
     wfs_output_mode="slopes",    # or "quadrants"
 )
 
@@ -65,19 +69,22 @@ engine = SynchronizedCubeEngine(
 dataset = engine.generate_cubes(n_science_frames=500)
 
 # Save to disk
-export_npz(dataset, "data/training_set.npz")
+export_fits(dataset, "data/synchronized_cubes.fits")
+export_npz(dataset, "data/synchronized_cubes.npz")
 ```
 
 ---
 
-## 3. Loading Data in PyTorch
+## 3. Loading Synchronized Data in PyTorch
 
 ```python
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-class ScexaoPSFDataset(Dataset):
+class SynchronizedOpticalDataset(Dataset):
+    """PyTorch Dataset for paired WFS telemetry and integrated science PSF frames."""
+
     def __init__(self, npz_path: str):
         data = np.load(npz_path, allow_pickle=True)
         self.wfs = torch.from_numpy(data["wfs_cube"]).float()        # (T_wfs, 2, H_pup, W_pup)
@@ -90,10 +97,10 @@ class ScexaoPSFDataset(Dataset):
         return self.psf.shape[0]
 
     def __getitem__(self, idx):
-        # 10 WFS frames corresponding to this 1 science exposure
+        # M WFS frames corresponding to this 1 science exposure
         start = idx * self.substeps
         end = start + self.substeps
-        wfs_chunk = self.wfs[start:end] # (10, 2, H, W)
-        target_psf = self.psf[idx]      # (H, W)
-        return wfs_chunk, target_psf
+        wfs_chunk = self.wfs[start:end] # (M, 2, H, W)
+        science_psf = self.psf[idx]     # (H, W)
+        return wfs_chunk, science_psf
 ```

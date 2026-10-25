@@ -14,7 +14,7 @@
 
 As an adaptive optics researcher viewing PyWFS detector frames,  
 I want the 4 re-imaged circular pupil footprints to have wide, realistic separation on the detector ($2.0\times$ pupil diameter or larger),  
-So that the 4 quadrants resemble the actual SCExAO CRED-1 / First camera layout with clear dark spacing between pupils and no crowding.
+So that the 4 quadrants resemble real-world camera layouts with clear dark spacing between pupils and no crowding.
 
 **Acceptance Scenarios**:
 1. **Given** a PyWFS with default `separation_ratio = 2.0`, **When** simulated on a circular or Subaru aperture, **Then** the distance between pupil centers is at least twice the pupil diameter, leaving a clear gap $> 1.0\times D_{\text{pup}}$ between the inner edges of adjacent pupils.
@@ -36,7 +36,7 @@ So that the on-axis star suppression and off-axis companion detection are displa
 
 ### User Story 3 - Repository Packaging & Documentation Suite (Priority: P3)
 
-As a researcher sharing Tablasul with colleagues and the SCExAO team,  
+As a researcher sharing Tablasul with colleagues and collaborators,  
 I want a clean Git repository with comprehensive documentation (optical theory, math, usage guides, API reference, and ready-to-run scripts),  
 So that any team member can clone, install via `uv`, and immediately understand the physics and code.
 

@@ -23,7 +23,7 @@
 - [x] T036 Create `.gitignore` in repository root
 - [x] T037 Initialize Git repository with `git init` and create initial commit
 - [x] T038 Create `docs/optical_theory.md` with complete mathematical and wave-optics derivations
-- [x] T039 Create `docs/psf_reconstruction_guide.md` with guide on training ML models with the synchronized cubes
+- [x] T039 Create `docs/synchronized_data_guide.md` with guide on simulating and loading synchronized WFS and PSF datasets
 - [x] T040 Update `README.md` with full documentation index, architecture diagram, and GitHub sharing instructions
 
 ---

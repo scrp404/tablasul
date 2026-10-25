@@ -4,7 +4,7 @@
 
 ## Summary
 
-1. Refine `PyramidWFS` separation physics: increase default `separation_ratio` to `2.0` and optimize Fourier grid allocation so that the 4 circular pupils are well-separated with wide dark margins matching SCExAO camera displays.
+1. Refine `PyramidWFS` separation physics: increase default `separation_ratio` to `2.0` and optimize Fourier grid allocation so that the 4 circular pupils are well-separated with wide dark margins matching standard camera displays.
 2. Refine `LyotCoronagraph` transmission profile: support both standard hard-edge and smooth apodized FPMs (`edge_softness`), and update visualization tools to display true astronomical normalized contrast units ($I / I_{\text{direct\_peak}}$) on a logarithmic scale from $10^{-6}$ to $1$.
 3. Git & Documentation: Initialize a clean Git repository, establish `.gitignore`, write an extensive documentation manual in `docs/` (optical derivations, coordinate systems, synchronization guides), and update `README.md`.
 

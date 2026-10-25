@@ -95,8 +95,8 @@ def run():
     dataset = engine.generate_cubes(n_science_frames=10, seed=42)
 
     # Export cubes
-    fits_path = out_dir / "scexao_example_cubes.fits"
-    npz_path = out_dir / "scexao_example_cubes.npz"
+    fits_path = out_dir / "example_cubes.fits"
+    npz_path = out_dir / "example_cubes.npz"
     export_fits(dataset, fits_path)
     export_npz(dataset, npz_path)
     print(f"Exported FITS to: {fits_path}")
@@ -176,7 +176,7 @@ def run():
             spine.set_color("#30363d")
 
     plt.tight_layout()
-    img_path = out_dir / "scexao_simulation_example.png"
+    img_path = out_dir / "simulation_example.png"
     plt.savefig(img_path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close()
     print(f"Saved diagnostic figure to: {img_path}")
@@ -185,7 +185,7 @@ def run():
     artifact_dir = Path("/Users/seamus/.gemini/antigravity/brain/bd82fcab-1201-4c84-a32e-014e18a799e1")
     artifact_dir.mkdir(parents=True, exist_ok=True)
     import shutil
-    shutil.copy(img_path, artifact_dir / "scexao_simulation_example.png")
+    shutil.copy(img_path, artifact_dir / "simulation_example.png")
     print("Copied figure to artifacts directory.")
 
 if __name__ == "__main__":

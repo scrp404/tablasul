@@ -6,7 +6,7 @@
 
 ## Summary
 
-Build `tablasul`, a standalone, first-principles wave-optics simulation library in pure Python and vectorized NumPy. `tablasul` models the end-to-end optical train between an entrance pupil, an evolving atmosphere, a Pyramid Wavefront Sensor (PyWFS), and a Science Focal Plane Camera equipped with a Lyot coronagraph. The primary data output is a synchronized suite of multi-dimensional cubes (`wfs_cube`, `psf_cube`, `ground_truth_phase`) designed specifically for training and benchmarking WFS-based PSF reconstruction algorithms. All physical components feature independent toggles enabling seamless scaling from an unaberrated diffraction-limited "toy model" to a full SCExAO-fidelity simulation.
+Build `tablasul`, a standalone, first-principles wave-optics simulation library in pure Python and vectorized NumPy. `tablasul` models the end-to-end optical train between an entrance pupil, an evolving atmosphere, a Pyramid Wavefront Sensor (PyWFS), and a Science Focal Plane Camera equipped with a Lyot coronagraph. The primary data output is a synchronized suite of multi-dimensional cubes (`wfs_cube`, `psf_cube`, `ground_truth_phase`) for simulating synchronized WFS and PSF data. All physical components feature independent toggles enabling seamless scaling from an unaberrated diffraction-limited "toy model" to a full realistic simulation.
 
 ## Technical Context
 
