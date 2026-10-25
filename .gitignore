@@ -1,0 +1,23 @@
+# Python virtual environments & bytecode
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Testing & Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Spec Kit runtime state
+.specify/feature.json
+
+# Output data products (keep examples script, ignore huge generated FITS if desired)
+examples/output/*.fits
+examples/output/*.npz
+
+# macOS
+.DS_Store
