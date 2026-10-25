@@ -49,7 +49,7 @@ print("Slopes (Sx, Sy):", result.slopes[0].shape, result.slopes[1].shape)
 
 ---
 
-### 2. High-Fidelity SCExAO Simulation with Off-Axis Planet & Coronagraph
+### 2. High-Fidelity Simulation with Off-Axis Planet & Coronagraph
 
 ```python
 from tablasul import (
@@ -116,8 +116,8 @@ print("WFS cube shape:", dataset.wfs_cube.shape)           # (500, 2, 48, 48)
 print("PSF cube shape:", dataset.psf_cube.shape)           # (50, 256, 256)
 print("Phase cube shape:", dataset.ground_truth_phase.shape) # (500, 256, 256)
 
-export_fits(dataset, "output/scexao_cubes.fits")
-export_npz(dataset, "output/scexao_cubes.npz")
+export_fits(dataset, "output/cubes.fits")
+export_npz(dataset, "output/cubes.npz")
 ```
 
 ---
