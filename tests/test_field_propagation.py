@@ -5,6 +5,7 @@ import pytest
 from scipy.special import j1
 from tablasul.core.field import ComplexElectricField
 from tablasul.core.aperture import CircularAperture
+from tablasul.engine.simulator import OpticalSystem
 
 
 def test_parseval_energy_conservation():
@@ -65,3 +66,25 @@ def test_analytical_airy_disk_verification():
     mask = r_lod <= 2.5
     max_error = np.max(np.abs(psf_norm[mask] - analytical_airy[mask]))
     assert max_error < 0.005, f"Airy profile discrepancy too large: {max_error}"
+
+
+def test_mft_toggleable_propagation():
+    """Verify that Matrix Fourier Transform (MFT) can be toggled on demand and matches FFT peak."""
+    system_fft = OpticalSystem(
+        aperture=CircularAperture(diameter=8.2, grid_size=128, samples_across_pupil=32),
+        science_propagator="fft",
+    )
+    system_mft = OpticalSystem(
+        aperture=CircularAperture(diameter=8.2, grid_size=128, samples_across_pupil=32),
+        science_propagator="mft",
+        science_fov_lod=32.0,  # Match FFT FOV
+        science_pixel_dims=128,
+    )
+    res_fft = system_fft.simulate_frame()
+    res_mft = system_mft.simulate_frame()
+
+    # Peak intensities must match to within 1%
+    fft_peak = np.max(res_fft.direct_psf)
+    mft_peak = np.max(res_mft.direct_psf)
+    assert np.isclose(fft_peak, mft_peak, rtol=0.01)
+    assert res_mft.science_psf.shape == (128, 128)

@@ -15,12 +15,14 @@ class ComplexElectricField:
         wavelength: Radiation wavelength in meters.
         pixel_scale: Grid spacing (in meters for pupil planes, radians for focal planes).
         plane: 'pupil' or 'focal'.
+        fov_lod: Field of view in lambda/D (if focal plane generated via MFT).
     """
 
     data: np.ndarray
     wavelength: float
     pixel_scale: float
     plane: Literal["pupil", "focal"] = "pupil"
+    fov_lod: float | None = None
 
     def __post_init__(self) -> None:
         if self.data.ndim != 2:
@@ -62,6 +64,7 @@ class ComplexElectricField:
             wavelength=self.wavelength,
             pixel_scale=self.pixel_scale,
             plane=self.plane,
+            fov_lod=self.fov_lod,
         )
 
     def apply_mask(self, mask: np.ndarray) -> ComplexElectricField:
@@ -76,10 +79,11 @@ class ComplexElectricField:
             wavelength=self.wavelength,
             pixel_scale=self.pixel_scale,
             plane=self.plane,
+            fov_lod=self.fov_lod,
         )
 
     def propagate_to_focal(self) -> ComplexElectricField:
-        """Propagate pupil field to the focal plane via paraxial Fraunhofer 2D FFT.
+        """Propagate pupil field to the focal plane via standard paraxial Fraunhofer 2D FFT.
 
         Preserves total energy (Parseval's theorem): sum(|E_focal|^2) == sum(|E_pupil|^2).
         """
@@ -120,4 +124,45 @@ class ComplexElectricField:
             wavelength=self.wavelength,
             pixel_scale=pupil_pixel_scale,
             plane="pupil",
+        )
+
+    def propagate_to_focal_mft(
+        self,
+        fov_lod: float,
+        n_focal: int,
+        samples_across_pupil: int,
+    ) -> ComplexElectricField:
+        """Propagate pupil field to an arbitrary focal plane via Matrix Fourier Transform (MFT).
+
+        Allows decoupling the focal plane field of view (in lambda/D) and pixel count
+        from the pupil grid resolution.
+        """
+        if self.plane != "pupil":
+            raise ValueError("Can only propagate to focal plane from a pupil plane.")
+
+        n_pupil = self.grid_size
+        mid_p = n_pupil // 2
+        mid_f = n_focal // 2
+
+        # Normalized pupil coordinates
+        u = (np.arange(n_pupil) - mid_p) / samples_across_pupil
+        # Focal coordinates in lambda/D
+        xf = (np.arange(n_focal) - mid_f) * (fov_lod / n_focal)
+
+        # 1D Fourier kernels
+        kx = np.exp(-2j * np.pi * np.outer(xf, u))
+        ky = np.exp(-2j * np.pi * np.outer(xf, u))
+
+        # Direct matrix multiplication
+        norm_factor = fov_lod / (samples_across_pupil * n_focal)
+        focal_data = norm_factor * (ky @ self.data @ kx.T)
+
+        focal_pixel_scale = (fov_lod / n_focal) * (self.wavelength / (samples_across_pupil * self.pixel_scale))
+
+        return ComplexElectricField(
+            data=focal_data,
+            wavelength=self.wavelength,
+            pixel_scale=focal_pixel_scale,
+            plane="focal",
+            fov_lod=fov_lod,
         )

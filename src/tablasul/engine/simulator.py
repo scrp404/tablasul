@@ -1,8 +1,8 @@
 """End-to-end optical simulation engine."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import List, Literal, Optional, Tuple, Union
 import numpy as np
 from ..core.aperture import Aperture, CircularAperture
 from ..core.field import ComplexElectricField
@@ -38,6 +38,9 @@ class OpticalSystem:
         wfs_detector: Noise model for the WFS camera.
         wfs_wavelength: WFS sensing wavelength in meters (default: 800 nm, visible).
         science_wavelength: Science imaging wavelength in meters (default: 1650 nm, NIR H-band).
+        science_propagator: 'fft' (default, coupled grid) or 'mft' (decoupled FOV and detector size).
+        science_fov_lod: Field of view in lambda/D for science camera when using MFT (default: 40.0).
+        science_pixel_dims: Pixel count along one axis for science detector when using MFT.
     """
 
     def __init__(
@@ -52,6 +55,9 @@ class OpticalSystem:
         wavelength: Optional[float] = None,
         wfs_wavelength: float = 800e-9,
         science_wavelength: float = 1650e-9,
+        science_propagator: Literal["fft", "mft"] = "fft",
+        science_fov_lod: float = 40.0,
+        science_pixel_dims: Optional[int] = None,
     ) -> None:
         self.aperture = aperture if aperture is not None else CircularAperture()
         self.pywfs = pywfs if pywfs is not None else PyramidWFS()
@@ -68,6 +74,10 @@ class OpticalSystem:
             self.wfs_wavelength = wfs_wavelength
             self.science_wavelength = science_wavelength
 
+        self.science_propagator = science_propagator
+        self.science_fov_lod = science_fov_lod
+        self.science_pixel_dims = science_pixel_dims
+
     def simulate_frame(
         self,
         phase_aberration: Optional[np.ndarray] = None,
@@ -79,11 +89,13 @@ class OpticalSystem:
         samples_pupil = self.aperture.samples_across_pupil
         pupil_radius_pixels = samples_pupil / 2.0
 
-        total_direct_psf = np.zeros((grid_size, grid_size), dtype=np.float64)
-        total_science_psf = np.zeros((grid_size, grid_size), dtype=np.float64)
+        use_mft = (self.science_propagator == "mft")
+        n_sci = self.science_pixel_dims if self.science_pixel_dims is not None else grid_size
+
+        total_direct_psf = np.zeros((n_sci, n_sci), dtype=np.float64) if use_mft else np.zeros((grid_size, grid_size), dtype=np.float64)
+        total_science_psf = np.zeros_like(total_direct_psf)
         total_wfs_detector = np.zeros((grid_size, grid_size), dtype=np.float64)
 
-        # Evaluate static NCPA if configured
         active_ncpa = ncpa_phase
         if active_ncpa is None and self.ncpa is not None:
             if isinstance(self.ncpa, ZernikeNCPA):
@@ -119,22 +131,69 @@ class OpticalSystem:
             if active_ncpa is not None:
                 total_phase_sci = total_phase_sci + active_ncpa
 
-            # Science arm
+            # Science arm propagation
             sci_pupil_field = self.aperture.create_field(
                 wavelength=self.science_wavelength,
                 total_flux=src.total_flux,
                 phase_aberration=total_phase_sci,
             )
-            sci_direct_focal = sci_pupil_field.propagate_to_focal()
-            total_direct_psf += sci_direct_focal.intensity
 
-            sci_corono_focal = self.coronagraph.propagate(
-                focal_field=sci_direct_focal,
-                samples_across_pupil=samples_pupil,
-            )
-            total_science_psf += sci_corono_focal.intensity
+            if use_mft:
+                # Direct PSF via MFT
+                direct_field_sci = sci_pupil_field.propagate_to_focal_mft(
+                    fov_lod=self.science_fov_lod,
+                    n_focal=n_sci,
+                    samples_across_pupil=samples_pupil,
+                )
+                total_direct_psf += direct_field_sci.intensity
 
-            # WFS arm
+                if not self.coronagraph.enabled:
+                    total_science_psf += direct_field_sci.intensity
+                else:
+                    # Coronagraph propagation: FFT to FPM -> IFFT to Lyot Stop -> MFT to science camera
+                    fpm_focal = sci_pupil_field.propagate_to_focal()
+                    mid_p = grid_size // 2
+                    y_p, x_p = np.ogrid[:grid_size, :grid_size]
+                    r_lod_fpm = np.hypot(x_p - mid_p, y_p - mid_p) * (samples_pupil / grid_size)
+
+                    if self.coronagraph.edge_taper_lod <= 0.0:
+                        fpm_mask = (r_lod_fpm >= self.coronagraph.fpm_radius_lod).astype(np.float64)
+                    else:
+                        r_in = max(0.0, self.coronagraph.fpm_radius_lod - self.coronagraph.edge_taper_lod / 2.0)
+                        r_out = self.coronagraph.fpm_radius_lod + self.coronagraph.edge_taper_lod / 2.0
+                        taper_range = r_out - r_in
+                        fpm_mask = np.zeros_like(r_lod_fpm)
+                        fpm_mask[r_lod_fpm >= r_out] = 1.0
+                        trans = (r_lod_fpm >= r_in) & (r_lod_fpm < r_out)
+                        fpm_mask[trans] = 0.5 * (1.0 - np.cos(np.pi * (r_lod_fpm[trans] - r_in) / taper_range))
+
+                    masked_focal = fpm_focal.apply_mask(fpm_mask)
+                    lyot_field = masked_focal.propagate_to_pupil()
+
+                    lyot_radius_pixels = pupil_radius_pixels * self.coronagraph.lyot_stop_ratio
+                    r_pupil = np.hypot(x_p - mid_p, y_p - mid_p)
+                    lyot_stop_mask = (r_pupil <= lyot_radius_pixels).astype(np.float64)
+                    masked_lyot = lyot_field.apply_mask(lyot_stop_mask)
+
+                    # Project from Lyot stop to final science camera via MFT
+                    final_corono_field = masked_lyot.propagate_to_focal_mft(
+                        fov_lod=self.science_fov_lod,
+                        n_focal=n_sci,
+                        samples_across_pupil=samples_pupil,
+                    )
+                    total_science_psf += final_corono_field.intensity
+            else:
+                # Classic standard FFT propagation
+                sci_direct_focal = sci_pupil_field.propagate_to_focal()
+                total_direct_psf += sci_direct_focal.intensity
+
+                sci_corono_focal = self.coronagraph.propagate(
+                    focal_field=sci_direct_focal,
+                    samples_across_pupil=samples_pupil,
+                )
+                total_science_psf += sci_corono_focal.intensity
+
+            # WFS arm propagation (always on WFS detector grid)
             wfs_pupil_field = self.aperture.create_field(
                 wavelength=self.wfs_wavelength,
                 total_flux=src.total_flux,
@@ -157,7 +216,6 @@ class OpticalSystem:
                 I3_tot += q3
                 I4_tot += q4
 
-        # Apply detector noise if enabled
         final_science_psf = self.science_detector.apply(total_science_psf, exposure_time=exposure_time)
         final_wfs_detector = self.wfs_detector.apply(total_wfs_detector, exposure_time=exposure_time)
 
